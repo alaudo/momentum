@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:phaser.io)",
+      "WebFetch(domain:newdocs.phaser.io)",
+      "Bash(grep -E \"\\\\.\\(js|ts|tsx|json\\)$\")",
+      "Bash(git:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(find /q/ai/momentum -type f -not -path */.git/*)",
+      "WebFetch(domain:brm.io)",
+      "WebFetch(domain:gamedev.stackexchange.com)",
+      "WebFetch(domain:reddit.com)",
+      "WebFetch(domain:labs.phaser.io)",
+      "WebFetch(domain:create-phaser-game.com)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:www.tutorialspoint.com)",
+      "WebFetch(domain:www.habrador.com)",
+      "WebFetch(domain:gamedev.dev)",
+      "WebFetch(domain:docs.phaser.io)",
+      "WebFetch(domain:phaser.discourse.group)",
+      "WebFetch(domain:www.apress.com)",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:itch.io)"
+    ]
+  },
+  "enabledPlugins": {
+    "code-simplifier@claude-plugins-official": true,
+    "feature-dev@claude-plugins-official": true,
+    "ralph-loop@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true
+  }
+}
