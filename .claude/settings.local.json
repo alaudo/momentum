@@ -22,7 +22,9 @@
       "WebFetch(domain:phaser.discourse.group)",
       "WebFetch(domain:www.apress.com)",
       "WebFetch(domain:en.wikipedia.org)",
-      "WebFetch(domain:itch.io)"
+      "WebFetch(domain:itch.io)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)"
     ]
   },
   "enabledPlugins": {
