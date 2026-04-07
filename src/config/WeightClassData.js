@@ -13,15 +13,15 @@ export function getWeightClass(weight) {
   const w = Math.max(1, Math.min(12, Math.round(weight)));
 
   if (w <= 4) {
-    // Class 1: Balloon / Flying
+    // Class 1: Balloon / Flying — very low friction, bouncy
     return {
       weight: w,
       class: WEIGHT_CLASS.BALLOON,
       className: 'Balloon',
       mass: w * 0.8,
       friction: 0.001,
-      frictionAir: 0.015 + (w * 0.003),
-      restitution: 0.75 - (w * 0.02),
+      frictionAir: 0.005 + (w * 0.001),  // very low so they glide far
+      restitution: 0.85 - (w * 0.02),     // very bouncy
       maxHP: w <= 2 ? 1 : 2,
       abyssImmune: true,
       waterImmune: true,
@@ -33,18 +33,18 @@ export function getWeightClass(weight) {
       radiusScale: 0.7 + (w * 0.03),
     };
   } else if (w <= 8) {
-    // Class 2: Wooden
+    // Class 2: Wooden — moderate friction, decent bounce
     return {
       weight: w,
       class: WEIGHT_CLASS.WOODEN,
       className: 'Wooden',
       mass: w * 1.2,
-      friction: 0.01 + ((w - 5) * 0.005),
-      frictionAir: 0.03 + ((w - 5) * 0.005),
-      restitution: 0.5 - ((w - 5) * 0.03),
+      friction: 0.005 + ((w - 5) * 0.002),
+      frictionAir: 0.008 + ((w - 5) * 0.002),  // reduced from 0.03+
+      restitution: 0.65 - ((w - 5) * 0.03),     // bouncier
       maxHP: 3,
       abyssImmune: false,
-      waterImmune: false,  // floats (handled specially)
+      waterImmune: false,
       spikeImmune: false,
       fanAffected: false,
       streamAffected: true,
@@ -54,15 +54,15 @@ export function getWeightClass(weight) {
       radiusScale: 0.82 + ((w - 5) * 0.04),
     };
   } else {
-    // Class 3: Heavy
+    // Class 3: Heavy — higher friction but still reasonable travel, lower bounce
     return {
       weight: w,
       class: WEIGHT_CLASS.HEAVY,
       className: 'Heavy',
       mass: w * 1.8,
-      friction: 0.02 + ((w - 9) * 0.008),
-      frictionAir: 0.04 + ((w - 9) * 0.008),
-      restitution: 0.3 - ((w - 9) * 0.03),
+      friction: 0.01 + ((w - 9) * 0.003),
+      frictionAir: 0.012 + ((w - 9) * 0.003),   // reduced from 0.04+
+      restitution: 0.45 - ((w - 9) * 0.03),      // bouncier than before
       maxHP: Infinity,
       abyssImmune: false,
       waterImmune: false,
@@ -80,7 +80,6 @@ export function getWeightClass(weight) {
  * Returns a color tint based on weight
  */
 function getWeightColor(weight) {
-  // Light colors for light balls, darker for heavy
   const colors = [
     0xffffff, // 1 - white
     0xe0f7fa, // 2 - very light cyan

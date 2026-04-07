@@ -8,7 +8,7 @@ import EventBus from '../state/EventBus.js';
 import {
   TURN_STATE, EVENTS, GAME_MODE, FORCE_MAX, TERRAIN,
 } from '../config/Constants.js';
-import { getFieldSize, getTilePixelSize } from '../utils/CoordinateUtils.js';
+import { getFieldSize, getTilePixelSize, worldToGrid } from '../utils/CoordinateUtils.js';
 import PhysicsSystem from '../systems/PhysicsSystem.js';
 import InputSystem from '../systems/InputSystem.js';
 import ForceSystem from '../systems/ForceSystem.js';
@@ -25,6 +25,7 @@ import LevelLoader from '../level/LevelLoader.js';
 import LevelValidator from '../level/LevelValidator.js';
 import EntityFactory from '../entities/EntityFactory.js';
 import EffectsRenderer from '../rendering/EffectsRenderer.js';
+import { getTerrainDef } from '../config/TerrainData.js';
 import { CAMPAIGN_MISSIONS } from '../data/CampaignIndex.js';
 
 export default class GameScene extends Phaser.Scene {
@@ -116,6 +117,16 @@ export default class GameScene extends Phaser.Scene {
     this.aiSystem = new AISystem(this, this.gameState, this.forceSystem);
     this.audioSystem = new AudioSystem();
 
+    // Start background music on any user interaction (required by browser)
+    // Use scene's input which persists, not once-only
+    const startMusicOnce = () => {
+      if (this.audioSystem && this.audioSystem.isMusicEnabled() && !this.audioSystem._musicPlaying) {
+        this.audioSystem.startMusic();
+      }
+      this.input.off('pointerdown', startMusicOnce);
+    };
+    this.input.on('pointerdown', startMusicOnce);
+
     // Create entities
     const entities = EntityFactory.createFromLevelData(this, levelData);
 
@@ -150,10 +161,73 @@ export default class GameScene extends Phaser.Scene {
     EventBus.on(EVENTS.STATE_CHANGED, this._onStateChanged, this);
     EventBus.on(EVENTS.GAME_OVER, this._onGameOver, this);
 
+    // --- Terrain tooltip on long hover ---
+    this._tooltipText = this.add.text(0, 0, '', {
+      fontSize: '12px',
+      fontFamily: 'Arial, sans-serif',
+      fontStyle: 'bold',
+      color: '#ffffff',
+      backgroundColor: '#1a1a2eDD',
+      padding: { x: 8, y: 5 },
+      stroke: '#000000',
+      strokeThickness: 1,
+    }).setOrigin(0, 1).setDepth(50).setVisible(false);
+
+    this._tooltipTimer = null;
+    this._lastTooltipTile = null;
+    const TOOLTIP_DESCRIPTIONS = {
+      'safe': 'Normal ground',
+      'safe_sand': 'Sand — high friction, slows balls',
+      'safe_ice': 'Ice — very slippery, low friction',
+      'abyss': 'Abyss — Class 2/3 fall in; Class 1 flies over',
+      'water': 'Water — Class 2 floats; Class 3 sinks',
+      'spikes': 'Spikes — damages Class 1/2; Class 3 immune',
+      'fan_n': 'Fan (North) — pushes Class 1 balls upward',
+      'fan_s': 'Fan (South) — pushes Class 1 balls downward',
+      'fan_e': 'Fan (East) — pushes Class 1 balls right',
+      'fan_w': 'Fan (West) — pushes Class 1 balls left',
+      'stream_n': 'Stream (North) — pushes Class 2 balls upward',
+      'stream_s': 'Stream (South) — pushes Class 2 balls downward',
+      'stream_e': 'Stream (East) — pushes Class 2 balls right',
+      'stream_w': 'Stream (West) — pushes Class 2 balls left',
+      'modifier_pad': 'Modifier Pad — changes ball weight on stop',
+    };
+
+    this.input.on('pointermove', (pointer) => {
+      const tilePixelSize = getTilePixelSize();
+      const { col, row } = worldToGrid(pointer.worldX, pointer.worldY, tilePixelSize);
+      const tileKey = `${col},${row}`;
+
+      if (tileKey !== this._lastTooltipTile) {
+        // Moved to a different tile — reset timer
+        this._lastTooltipTile = tileKey;
+        this._tooltipText.setVisible(false);
+        if (this._tooltipTimer) {
+          this._tooltipTimer.remove(false);
+          this._tooltipTimer = null;
+        }
+
+        const tile = this.gameState.grid ? this.gameState.grid.getTile(col, row) : null;
+        if (tile && tile.type !== TERRAIN.SAFE) {
+          this._tooltipTimer = this.time.delayedCall(600, () => {
+            let desc = TOOLTIP_DESCRIPTIONS[tile.type] || tile.type;
+            if (tile.type === 'modifier_pad' && tile.metadata?.modifierDelta !== undefined) {
+              const sign = tile.metadata.modifierDelta > 0 ? '+' : '';
+              desc += ` (${sign}${tile.metadata.modifierDelta})`;
+            }
+            this._tooltipText.setText(desc);
+            this._tooltipText.setPosition(pointer.worldX + 10, pointer.worldY - 5);
+            this._tooltipText.setVisible(true);
+          });
+        }
+      }
+    });
+
     // Start HUD scene
     this.scene.launch('HUDScene', {
       gameState: this.gameState,
       forceSystem: this.forceSystem,
+      audioSystem: this.audioSystem,
     });
 
     // Initial state
@@ -267,6 +341,7 @@ export default class GameScene extends Phaser.Scene {
         seed: this.seed,
         difficulty: this.difficulty,
         missionId: this.missionId,
+        missionData: this.missionData,
         score: this.gameState.score,
         turns: this.gameState.turnNumber,
         enemiesDestroyed: this.gameState.enemiesDestroyed,
@@ -286,6 +361,7 @@ export default class GameScene extends Phaser.Scene {
     if (this.aiSystem) this.aiSystem.destroy();
     if (this.tileRenderer) this.tileRenderer.destroy();
     if (this.effectsRenderer) this.effectsRenderer.destroy();
+    if (this.audioSystem) this.audioSystem.destroy();
 
     EventBus.removeAllListeners();
   }

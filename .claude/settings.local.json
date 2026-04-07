@@ -24,7 +24,14 @@
       "WebFetch(domain:en.wikipedia.org)",
       "WebFetch(domain:itch.io)",
       "Bash(npm init:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(dir package.json)",
+      "Bash(npx vite:*)",
+      "Bash(npx vitest:*)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_click"
     ]
   },
   "enabledPlugins": {

@@ -1,12 +1,12 @@
 // ============================================================
-// AudioSystem.js — ZzFX wrapper, sound definitions
+// AudioSystem.js — ZzFX wrapper, sound definitions, procedural
+// ambient background music with mute option
 // ============================================================
 
 import { EVENTS } from '../config/Constants.js';
 import EventBus from '../state/EventBus.js';
 
 // ZzFX sound parameter arrays
-// Format: [volume, randomness, frequency, attack, sustain, release, shape, shapeCurve, slide, deltaSlide, pitchJump, pitchJumpTime, repeatTime, noise, modulation, bitCrush, delay, sustainVolume, decay, tremolo]
 const SOUNDS = {
   shoot:          [1, .05, 200, .02, .05, .1, 1, 1, , , , , , , , , , .5],
   collide_light:  [.5, .05, 400, , .02, .01, 4, , , , , , , , , , , , .1],
@@ -25,10 +25,16 @@ const SOUNDS = {
 
 let zzfxPlay = null;
 let soundEnabled = true;
+let musicEnabled = true;
 
 export default class AudioSystem {
   constructor() {
-    // Dynamically import ZzFX
+    this._audioCtx = null;
+    this._musicNodes = [];
+    this._musicPlaying = false;
+    this._musicGain = null;
+    this._intervals = [];
+
     this._initZzFX();
     this._bindEvents();
   }
@@ -51,14 +57,186 @@ export default class AudioSystem {
     if (params) {
       try {
         zzfxPlay(...params);
-      } catch (e) {
-        // Ignore audio context errors (user hasn't interacted yet)
-      }
+      } catch (e) { /* ignore */ }
     }
   }
 
   setEnabled(enabled) {
     soundEnabled = enabled;
+  }
+
+  setMusicEnabled(enabled) {
+    musicEnabled = enabled;
+    if (enabled) {
+      this.startMusic();
+    } else {
+      this.stopMusic();
+    }
+  }
+
+  isMusicEnabled() {
+    return musicEnabled;
+  }
+
+  isSoundEnabled() {
+    return soundEnabled;
+  }
+
+  // ============================================================
+  // Calm Ambient Space Music
+  // Gentle sine pads, slow evolving chords, soft bell-like tones
+  // ============================================================
+
+  startMusic() {
+    if (this._musicPlaying || !musicEnabled) return;
+
+    try {
+      this._audioCtx = this._audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (this._audioCtx.state === 'suspended') {
+        this._audioCtx.resume();
+      }
+
+      const ctx = this._audioCtx;
+
+      // Master gain — very quiet, ambient level
+      this._musicGain = ctx.createGain();
+      this._musicGain.gain.value = 0.08;
+      this._musicGain.connect(ctx.destination);
+
+      // Gentle drone pad
+      this._startDronePad(ctx);
+
+      // Slow bell-like tones
+      this._startBells(ctx);
+
+      this._musicPlaying = true;
+    } catch (e) {
+      console.warn('Music init failed:', e);
+    }
+  }
+
+  _startDronePad(ctx) {
+    // Three detuned sine oscillators forming a soft Am chord
+    // Extremely slow chord changes for a meditative feel
+    const chords = [
+      [110, 164.81, 220],    // Am  (A2, E3, A3)
+      [98, 146.83, 196],     // G   (G2, D3, G3)
+      [87.31, 130.81, 174.61], // F  (F2, C3, F3)
+      [82.41, 123.47, 164.81], // E  (E2, B2, E3)
+    ];
+
+    const padGain = ctx.createGain();
+    padGain.gain.value = 0.5;
+
+    const padFilter = ctx.createBiquadFilter();
+    padFilter.type = 'lowpass';
+    padFilter.frequency.value = 400;
+    padFilter.Q.value = 0.5;
+
+    // Very slow filter sweep
+    const filterLfo = ctx.createOscillator();
+    const filterLfoGain = ctx.createGain();
+    filterLfo.type = 'sine';
+    filterLfo.frequency.value = 0.02; // one cycle every 50 seconds
+    filterLfoGain.gain.value = 150;
+    filterLfo.connect(filterLfoGain);
+    filterLfoGain.connect(padFilter.frequency);
+    filterLfo.start();
+
+    padFilter.connect(padGain);
+    padGain.connect(this._musicGain);
+
+    this._padOscillators = [];
+    for (let i = 0; i < 3; i++) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = chords[0][i];
+      osc.detune.value = (i - 1) * 5; // subtle detune
+      osc.connect(padFilter);
+      osc.start();
+      this._padOscillators.push(osc);
+    }
+
+    this._musicNodes.push(padGain, padFilter, filterLfo, filterLfoGain, ...this._padOscillators);
+
+    // Slowly cycle through chords — every 12 seconds
+    let chordIdx = 0;
+    const padInterval = setInterval(() => {
+      if (!this._musicPlaying || !musicEnabled) return;
+      chordIdx = (chordIdx + 1) % chords.length;
+      for (let i = 0; i < 3; i++) {
+        if (this._padOscillators[i]) {
+          this._padOscillators[i].frequency.setTargetAtTime(
+            chords[chordIdx][i], ctx.currentTime, 2.0 // 2-second glide
+          );
+        }
+      }
+    }, 12000);
+    this._intervals.push(padInterval);
+  }
+
+  _startBells(ctx) {
+    // Gentle bell-like tones — sine with fast decay, played infrequently
+    // Pentatonic scale for a peaceful, non-dissonant feel
+    const bellNotes = [
+      440, 494, 587, 659, 784,    // A4 B4 D5 E5 G5
+      880, 784, 659, 587, 494,    // A5 G5 E5 D5 B4
+    ];
+    let bellIdx = 0;
+
+    const bellInterval = setInterval(() => {
+      if (!this._musicPlaying || !musicEnabled) return;
+
+      // Only play a bell ~40% of the time for sparse, ambient feel
+      if (Math.random() > 0.4) return;
+
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.value = bellNotes[bellIdx % bellNotes.length];
+
+        // Soft envelope — gentle attack, long decay
+        const now = ctx.currentTime;
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.15, now + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+
+        osc.connect(gain);
+        gain.connect(this._musicGain);
+
+        osc.start(now);
+        osc.stop(now + 2.6);
+
+        bellIdx++;
+      } catch (e) { /* ignore closed context */ }
+    }, 3000); // one potential bell every 3 seconds
+
+    this._intervals.push(bellInterval);
+  }
+
+  stopMusic() {
+    this._musicPlaying = false;
+
+    for (const node of this._musicNodes) {
+      try {
+        if (node.stop) node.stop();
+        if (node.disconnect) node.disconnect();
+      } catch (e) { /* already stopped */ }
+    }
+    this._musicNodes = [];
+    this._padOscillators = [];
+
+    for (const interval of this._intervals) {
+      clearInterval(interval);
+    }
+    this._intervals = [];
+
+    if (this._musicGain) {
+      try { this._musicGain.disconnect(); } catch (e) {}
+      this._musicGain = null;
+    }
   }
 
   _bindEvents() {
@@ -90,7 +268,11 @@ export default class AudioSystem {
   }
 
   destroy() {
+    this.stopMusic();
     EventBus.removeAllListeners(EVENTS.SHOT_FIRED);
-    // Note: we don't remove all listeners as other systems use them too
+    if (this._audioCtx) {
+      try { this._audioCtx.close(); } catch (e) {}
+      this._audioCtx = null;
+    }
   }
 }

@@ -120,8 +120,8 @@ describe('LevelGenerator', () => {
   // Hazard placement
   // ----------------------------------------
   describe('hazard placement', () => {
-    it('should place abyss tiles at any difficulty', () => {
-      const level = LevelGenerator.generate('abyss-1');
+    it('should place abyss tiles at medium difficulty', () => {
+      const level = LevelGenerator.generate('abyss-5');
       const abyssTiles = level.grid.getTilesOfType(TERRAIN.ABYSS);
       expect(abyssTiles.length).toBeGreaterThan(0);
     });

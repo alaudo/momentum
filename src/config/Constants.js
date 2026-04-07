@@ -14,21 +14,23 @@ export const BALL_MIN_WEIGHT = 1;
 export const BALL_MAX_WEIGHT = 12;
 
 // Force
-export const FORCE_MAX = 100;
-export const FORCE_REGEN_INTERVAL = 3; // every N moves
-export const FORCE_REGEN_AMOUNT = 25;
-export const FORCE_COST_MULTIPLIER = 0.8; // cost = pullPower * weight * multiplier
+export const FORCE_MAX = 120;
+export const FORCE_REGEN_INTERVAL = 1; // every N moves (regen every turn)
+export const FORCE_REGEN_AMOUNT = 22;  // base regen per interval (was 15)
+export const FORCE_REGEN_BONUS_PER_DIFFICULTY = 3; // extra regen per difficulty level (was 2)
+export const FORCE_COST_MULTIPLIER = 0.55; // cost = pullPower * weight * multiplier (was 0.8)
 
 // Physics
 export const MOTION_THRESHOLD = 0.1;
 export const MOTION_TIMEOUT = 6000; // ms
-export const MAX_PULL_DISTANCE = 120; // pixels for max power drag
-export const MAX_IMPULSE_MAGNITUDE = 0.08;
+export const MAX_PULL_DISTANCE = 150; // pixels for max power drag
+export const MAX_IMPULSE_MAGNITUDE = 0.45; // base impulse — strong enough for any ball to cross the field
 export const WALL_THICKNESS = 40; // pixels
 
 // Trajectory
 export const TRAJECTORY_DOTS = 20;
 export const TRAJECTORY_DOT_SPACING = 18;
+export const TRAJECTORY_BOUNCE_COUNT = 2; // number of predicted bounces to show
 
 // Collision categories (bitmask)
 export const CATEGORY = {
@@ -114,23 +116,27 @@ export const COLORS = {
   ENEMY_BALL:     0xef5350, // red
   PLAYER2_BALL:   0xffa726, // orange
   FRIENDLY_BALL:  0x66bb6a, // green
+  // Weight class border colors
+  CLASS_BALLOON:  0x00e5ff, // bright cyan — Class 1 (Balloon, w1-4)
+  CLASS_WOODEN:   0xffab40, // amber/orange — Class 2 (Wooden, w5-8)
+  CLASS_HEAVY:    0x78909c, // blue-grey — Class 3 (Heavy, w9-12)
   WALL:           0x37474f,
   WALL_STROKE:    0x546e7a,
-  SAFE_GROUND:    0x2e3d2e,
-  SAFE_SAND:      0x4a3b2a,
-  SAFE_ICE:       0x80cbc4,
-  ABYSS:          0x0a0a0a,
-  WATER:          0x1565c0,
-  WATER_LIGHT:    0x42a5f5,
-  SPIKES:         0x757575,
-  SPIKE_TIP:      0xbdbdbd,
-  FAN:            0x78909c,
-  FAN_ARROW:      0xb0bec5,
-  STREAM:         0x0d47a1,
-  STREAM_ARROW:   0x64b5f6,
-  MODIFIER_PAD:   0x7e57c2,
-  BOUNCY:         0xff7043,
-  BOUNCY_GLOW:    0xffab91,
+  SAFE_GROUND:    0x3a5c3a, // brighter green
+  SAFE_SAND:      0x8b7355, // brighter tan/sand
+  SAFE_ICE:       0xa0e8e0, // brighter cyan
+  ABYSS:          0x1a0a2e, // dark purple-black (distinct from other darks)
+  WATER:          0x2196f3, // brighter blue
+  WATER_LIGHT:    0x64b5f6, // brighter highlight
+  SPIKES:         0x9e9e9e, // brighter grey
+  SPIKE_TIP:      0xe0e0e0, // brighter tips
+  FAN:            0x90a4ae, // brighter blue-grey
+  FAN_ARROW:      0xcfd8dc, // brighter arrow
+  STREAM:         0x1976d2, // brighter dark blue
+  STREAM_ARROW:   0x90caf9, // brighter arrow
+  MODIFIER_PAD:   0x9c27b0, // brighter purple
+  BOUNCY:         0xff8a65, // brighter orange
+  BOUNCY_GLOW:    0xffccbc, // brighter glow
   TRAJECTORY:     0xffffff,
   TRAJECTORY_WARN:0xff5252,
   FORCE_BAR:      0x4caf50,

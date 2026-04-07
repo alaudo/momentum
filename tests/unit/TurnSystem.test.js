@@ -210,7 +210,7 @@ describe('TurnSystem', () => {
     it('should NOT regen before interval is reached', () => {
       gameState.addBall({ id: 1, owner: 'player', isDestroyed: false });
       gameState.addBall({ id: 2, owner: 'enemy', isDestroyed: false });
-      gameState.movesSinceRegen = 1;
+      gameState.movesSinceRegen = 0;
 
       const regenSpy = vi.spyOn(forceSystem, 'regen');
       turnSystem.onModifiersResolved();

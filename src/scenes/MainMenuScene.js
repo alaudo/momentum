@@ -5,6 +5,7 @@
 import Phaser from 'phaser';
 import { Button } from '../rendering/UIComponents.js';
 import { COLORS, GAME_MODE } from '../config/Constants.js';
+import AudioSystem from '../systems/AudioSystem.js';
 
 export default class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -87,6 +88,45 @@ export default class MainMenuScene extends Phaser.Scene {
       fontFamily: 'Arial, sans-serif',
       color: '#455a64',
     }).setOrigin(1, 1);
+
+    // Audio toggle (bottom-left)
+    // Create a lightweight AudioSystem just for the toggle state
+    this._audioSys = new AudioSystem();
+
+    const musicOn = this._audioSys.isMusicEnabled();
+    this.musicText = this.add.text(10, height - 10, musicOn ? '[M] Music: ON' : '[M] Music: OFF', {
+      fontSize: '12px',
+      fontFamily: 'Arial, sans-serif',
+      color: musicOn ? '#66bb6a' : '#78909c',
+    }).setOrigin(0, 1).setInteractive({ useHandCursor: true });
+
+    this.musicText.on('pointerdown', () => this._toggleMusic());
+
+    const sfxOn = this._audioSys.isSoundEnabled();
+    this.sfxText = this.add.text(10, height - 26, sfxOn ? '[S] SFX: ON' : '[S] SFX: OFF', {
+      fontSize: '12px',
+      fontFamily: 'Arial, sans-serif',
+      color: sfxOn ? '#66bb6a' : '#78909c',
+    }).setOrigin(0, 1).setInteractive({ useHandCursor: true });
+
+    this.sfxText.on('pointerdown', () => this._toggleSFX());
+
+    this.input.keyboard.on('keydown-M', () => this._toggleMusic());
+    this.input.keyboard.on('keydown-S', () => this._toggleSFX());
+  }
+
+  _toggleMusic() {
+    const newState = !this._audioSys.isMusicEnabled();
+    this._audioSys.setMusicEnabled(newState);
+    this.musicText.setText(newState ? '[M] Music: ON' : '[M] Music: OFF');
+    this.musicText.setColor(newState ? '#66bb6a' : '#78909c');
+  }
+
+  _toggleSFX() {
+    const newState = !this._audioSys.isSoundEnabled();
+    this._audioSys.setEnabled(newState);
+    this.sfxText.setText(newState ? '[S] SFX: ON' : '[S] SFX: OFF');
+    this.sfxText.setColor(newState ? '#66bb6a' : '#78909c');
   }
 
   _startMode(mode) {

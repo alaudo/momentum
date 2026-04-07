@@ -6,6 +6,7 @@ import Phaser from 'phaser';
 import { Button } from '../rendering/UIComponents.js';
 import { COLORS, GAME_MODE } from '../config/Constants.js';
 import PersistenceManager from '../state/PersistenceManager.js';
+import { CAMPAIGN_MISSIONS } from '../data/CampaignIndex.js';
 
 export default class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -73,6 +74,39 @@ export default class GameOverScene extends Phaser.Scene {
       });
     }
 
+    // Campaign: auto-advance to next mission on win
+    if (isWin && this.result.mode === GAME_MODE.CAMPAIGN && this.result.missionId) {
+      const nextMission = CAMPAIGN_MISSIONS.find(m => m.id === this.result.missionId + 1);
+      if (nextMission) {
+        new Button(this, width / 2, btnY, 'NEXT MISSION', {
+          width: 200,
+          height: 50,
+          onClick: () => this._nextCampaignMission(nextMission),
+        });
+
+        // Auto-advance after 3 seconds
+        this.add.text(width / 2, btnY - 25, 'Auto-advancing in 3s...', {
+          fontSize: '11px',
+          fontFamily: 'Arial, sans-serif',
+          color: '#78909c',
+        }).setOrigin(0.5, 0.5);
+
+        this._autoAdvanceTimer = this.time.delayedCall(3000, () => {
+          this._nextCampaignMission(nextMission);
+        });
+      } else {
+        // Last mission completed!
+        this.add.text(width / 2, btnY, 'CAMPAIGN COMPLETE!', {
+          fontSize: '22px',
+          fontFamily: 'Arial, sans-serif',
+          fontStyle: 'bold',
+          color: '#ffd700',
+          stroke: '#000000',
+          strokeThickness: 3,
+        }).setOrigin(0.5, 0.5);
+      }
+    }
+
     new Button(this, width / 2, btnY + 60, 'PLAY AGAIN', {
       width: 200,
       height: 50,
@@ -98,6 +132,9 @@ export default class GameOverScene extends Phaser.Scene {
   }
 
   _playAgain() {
+    if (this._autoAdvanceTimer) {
+      this._autoAdvanceTimer.remove(false);
+    }
     if (this.result.mode === GAME_MODE.CAMPAIGN) {
       this.scene.start('GameScene', {
         mode: GAME_MODE.CAMPAIGN,
@@ -111,6 +148,17 @@ export default class GameOverScene extends Phaser.Scene {
         difficulty: this.result.difficulty,
       });
     }
+  }
+
+  _nextCampaignMission(mission) {
+    if (this._autoAdvanceTimer) {
+      this._autoAdvanceTimer.remove(false);
+    }
+    this.scene.start('GameScene', {
+      mode: GAME_MODE.CAMPAIGN,
+      missionId: mission.id,
+      missionData: mission,
+    });
   }
 
   _saveResults() {

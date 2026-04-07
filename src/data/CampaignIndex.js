@@ -18,9 +18,9 @@ export const CAMPAIGN_MISSIONS = [
       gridHeight: 5,
       tiles: [
         ['safe', 'safe', 'safe', 'safe', 'safe'],
-        ['safe', 'safe', 'safe', 'safe', 'safe'],
+        ['safe', 'safe', 'spikes', 'safe', 'safe'],
         ['safe', 'safe', 'abyss', 'safe', 'safe'],
-        ['safe', 'safe', 'safe', 'safe', 'safe'],
+        ['safe', 'spikes', 'safe', 'safe', 'safe'],
         ['safe', 'safe', 'safe', 'safe', 'safe'],
       ],
       playerBalls: [{ gridCol: 0, gridRow: 4, weight: 5 }],

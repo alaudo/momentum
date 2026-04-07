@@ -88,7 +88,7 @@ export default class TileRenderer {
     this.graphics.fillRect(x, y, ts, ts);
 
     // Subtle texture dots
-    this.graphics.fillStyle(0x3a4d3a, 0.4);
+    this.graphics.fillStyle(0x4a7a4a, 0.5);
     for (let i = 0; i < 4; i++) {
       const dx = ((i * 17 + x) % ts) * 0.7 + ts * 0.15;
       const dy = ((i * 23 + y) % ts) * 0.7 + ts * 0.15;
@@ -101,7 +101,7 @@ export default class TileRenderer {
     this.graphics.fillRect(x, y, ts, ts);
 
     // Heavy stippling
-    this.graphics.fillStyle(0x5a4b3a, 0.5);
+    this.graphics.fillStyle(0xa08a6a, 0.5);
     for (let i = 0; i < 12; i++) {
       const dx = ((i * 13 + x * 3) % ts);
       const dy = ((i * 19 + y * 7) % ts);
@@ -114,7 +114,7 @@ export default class TileRenderer {
     this.graphics.fillRect(x, y, ts, ts);
 
     // Shine streaks
-    this.graphics.lineStyle(1, 0xb2dfdb, 0.3);
+    this.graphics.lineStyle(1, 0xd0f0ec, 0.4);
     this.graphics.lineBetween(x + ts * 0.2, y + ts * 0.3, x + ts * 0.7, y + ts * 0.2);
     this.graphics.lineBetween(x + ts * 0.3, y + ts * 0.7, x + ts * 0.8, y + ts * 0.6);
   }
@@ -123,16 +123,16 @@ export default class TileRenderer {
     this.graphics.fillStyle(COLORS.ABYSS, 1);
     this.graphics.fillRect(x, y, ts, ts);
 
-    // Depth pattern
-    this.graphics.fillStyle(0x151515, 0.5);
+    // Depth pattern — concentric rings with purple tint
+    this.graphics.fillStyle(0x2a1545, 0.5);
     const cx = x + ts / 2;
     const cy = y + ts / 2;
     for (let r = ts * 0.4; r > 5; r -= 8) {
       this.graphics.fillCircle(cx, cy, r);
     }
 
-    // Edge highlight
-    this.graphics.lineStyle(2, 0x2a2a2a, 0.8);
+    // Edge highlight — more visible
+    this.graphics.lineStyle(2, 0x4a2a6a, 0.8);
     this.graphics.strokeRect(x + 1, y + 1, ts - 2, ts - 2);
   }
 

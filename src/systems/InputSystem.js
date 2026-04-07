@@ -80,13 +80,31 @@ export default class InputSystem {
     const forceCost = this.forceSystem.calculateCost(power, ball.weight);
     const canAfford = this.forceSystem.canAfford(forceCost);
 
-    // Draw trajectory
+    // Draw trajectory with bounce prediction (including bumpers and balls)
+    const obstacles = [];
+    // Add bumpers
+    for (const bumper of (this.gameState.bumpers || [])) {
+      obstacles.push({ x: bumper.x, y: bumper.y, radius: bumper.radius || 15 });
+    }
+    // Add other balls (enemies, friendly, etc.)
+    for (const b of this.gameState.getAllBalls()) {
+      if (b.id !== ball.id && !b.isDestroyed) {
+        obstacles.push({ x: b.x, y: b.y, radius: b.radiusPixels });
+      }
+    }
+
     this.trajectoryRenderer.draw(
       ball.x, ball.y,
       norm.x, norm.y,
       power,
       forceCost,
-      canAfford
+      canAfford,
+      {
+        ballRadius: ball.radiusPixels,
+        gridWidth: this.gameState.gridWidth,
+        gridHeight: this.gameState.gridHeight,
+        obstacles,
+      }
     );
   }
 
@@ -124,10 +142,11 @@ export default class InputSystem {
     const norm = normalizeVector(-dx, -dy);
     const impulseMag = power * MAX_IMPULSE_MAGNITUDE;
 
-    // Heavier balls get proportionally less impulse per force spent
-    // but we already factored weight into the force cost
-    const impulseX = norm.x * impulseMag;
-    const impulseY = norm.y * impulseMag;
+    // Scale impulse with weight: heavier balls need more force to move
+    // This ensures every shot at full power sends the ball across the field
+    const weightFactor = Math.sqrt(ball.weight); // sqrt scaling: w5→2.2x, w12→3.5x
+    const impulseX = norm.x * impulseMag * weightFactor;
+    const impulseY = norm.y * impulseMag * weightFactor;
 
     // Fire!
     ball.applyImpulse(impulseX, impulseY);

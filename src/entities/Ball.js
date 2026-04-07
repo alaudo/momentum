@@ -5,7 +5,7 @@
 import { getWeightClass } from '../config/WeightClassData.js';
 import {
   BALL_RADIUS_POINTS, POINT_TO_PIXEL, CATEGORY, MOTION_THRESHOLD,
-  COLORS, BALL_MIN_WEIGHT, BALL_MAX_WEIGHT,
+  COLORS, BALL_MIN_WEIGHT, BALL_MAX_WEIGHT, WEIGHT_CLASS,
 } from '../config/Constants.js';
 import { clamp } from '../utils/MathUtils.js';
 import EventBridge from '../utils/EventBridge.js';
@@ -56,14 +56,23 @@ export default class Ball {
     this.graphics = scene.add.graphics();
     this.damageGraphics = scene.add.graphics();
 
-    // Weight text
+    // Weight text — high-contrast with shadow for readability
+    const textSize = Math.max(14, Math.round(this.radiusPixels * 1.1));
     this.weightText = scene.add.text(config.x, config.y, String(this.weight), {
-      fontSize: `${Math.round(this.radiusPixels * 0.9)}px`,
-      fontFamily: 'Arial, sans-serif',
+      fontSize: `${textSize}px`,
+      fontFamily: 'Arial Black, Impact, sans-serif',
       fontStyle: 'bold',
       color: '#ffffff',
       stroke: '#000000',
-      strokeThickness: 2,
+      strokeThickness: Math.max(3, Math.round(textSize * 0.22)),
+      shadow: {
+        offsetX: 1,
+        offsetY: 1,
+        color: '#000000',
+        blur: 3,
+        fill: true,
+        stroke: true,
+      },
     }).setOrigin(0.5, 0.5).setDepth(10);
 
     // Modifier indicator text (floating above ball)
@@ -102,6 +111,7 @@ export default class Ball {
 
     const ownerColor = this._getOwnerColor();
     const weightColor = this.weightData.color;
+    const classColor = this._getClassColor();
 
     this.graphics.clear();
 
@@ -109,13 +119,50 @@ export default class Ball {
     this.graphics.fillStyle(ownerColor, 1);
     this.graphics.fillCircle(0, 0, this.radiusPixels);
 
-    // Inner fill (weight color)
-    this.graphics.fillStyle(weightColor, 0.85);
+    // Inner fill — owner-tinted background so enemy/friendly are clearly distinct
+    // Enemy: reddish tint over weight color, Friendly: greenish tint
+    const bgColor = this._getBackgroundTint();
+    this.graphics.fillStyle(bgColor, 0.5);
     this.graphics.fillCircle(0, 0, this.radiusPixels * 0.78);
 
-    // Class indicator ring
-    this.graphics.lineStyle(2, ownerColor, 0.8);
+    // Weight color layer on top at lower opacity
+    this.graphics.fillStyle(weightColor, 0.55);
+    this.graphics.fillCircle(0, 0, this.radiusPixels * 0.78);
+
+    // Contrast backing for weight text (dark semi-transparent circle behind text)
+    this.graphics.fillStyle(0x000000, 0.35);
+    this.graphics.fillCircle(0, 0, this.radiusPixels * 0.52);
+
+    // Class indicator ring — colored by weight class (Balloon=cyan, Wooden=amber, Heavy=grey)
+    this.graphics.lineStyle(3, classColor, 0.9);
     this.graphics.strokeCircle(0, 0, this.radiusPixels * 0.9);
+
+    // Second thin outer ring for clarity
+    this.graphics.lineStyle(1.5, classColor, 0.5);
+    this.graphics.strokeCircle(0, 0, this.radiusPixels);
+
+    // Owner indicator pattern for enemy/friendly distinction
+    if (this.owner === 'enemy') {
+      // Bold red X pattern inside the ball to clearly mark as enemy
+      this.graphics.lineStyle(2, 0xff0000, 0.4);
+      const r = this.radiusPixels * 0.55;
+      this.graphics.lineBetween(-r, -r, r, r);
+      this.graphics.lineBetween(r, -r, -r, r);
+      // Red dots at the ends
+      this.graphics.fillStyle(0xff0000, 0.35);
+      this.graphics.fillCircle(-r * 0.7, 0, 2.5);
+      this.graphics.fillCircle(r * 0.7, 0, 2.5);
+      this.graphics.fillCircle(0, -r * 0.7, 2.5);
+      this.graphics.fillCircle(0, r * 0.7, 2.5);
+    } else if (this.owner === 'friendly') {
+      // Small shield/diamond inside for friendly
+      this.graphics.lineStyle(1.5, 0x66bb6a, 0.4);
+      const r = this.radiusPixels * 0.35;
+      this.graphics.strokeCircle(0, 0, r);
+      // Small dot in center
+      this.graphics.fillStyle(0x66bb6a, 0.3);
+      this.graphics.fillCircle(0, 0, r * 0.4);
+    }
 
     // King indicator
     if (this.isKing) {
@@ -181,8 +228,10 @@ export default class Ball {
     this.radiusPixels = newRadius;
 
     // Update weight text
+    const newTextSize = Math.max(14, Math.round(this.radiusPixels * 1.1));
     this.weightText.setText(String(this.weight));
-    this.weightText.setFontSize(`${Math.round(this.radiusPixels * 0.9)}px`);
+    this.weightText.setFontSize(`${newTextSize}px`);
+    this.weightText.setStroke('#000000', Math.max(3, Math.round(newTextSize * 0.22)));
 
     // Re-render
     this.render();
@@ -217,9 +266,12 @@ export default class Ball {
 
     const x = this.body.position.x;
     const y = this.body.position.y;
+    const angle = this.body.angle || 0;
 
     this.graphics.setPosition(x, y);
+    this.graphics.setRotation(angle);
     this.damageGraphics.setPosition(x, y);
+    this.damageGraphics.setRotation(angle);
     this.weightText.setPosition(x, y);
     this.modifierText.setPosition(x, y - this.radiusPixels - 10);
 
@@ -265,6 +317,25 @@ export default class Ball {
       case 'player2': return COLORS.PLAYER2_BALL;
       case 'friendly': return COLORS.FRIENDLY_BALL;
       default: return COLORS.PLAYER_BALL;
+    }
+  }
+
+  _getClassColor() {
+    switch (this.weightData.class) {
+      case WEIGHT_CLASS.BALLOON: return COLORS.CLASS_BALLOON;
+      case WEIGHT_CLASS.WOODEN:  return COLORS.CLASS_WOODEN;
+      case WEIGHT_CLASS.HEAVY:   return COLORS.CLASS_HEAVY;
+      default: return 0xffffff;
+    }
+  }
+
+  _getBackgroundTint() {
+    switch (this.owner) {
+      case 'player':   return 0x1a3a5a; // dark blue tint
+      case 'enemy':    return 0x8a2020; // strong red tint — very noticeable
+      case 'player2':  return 0x5a4a1a; // dark amber tint
+      case 'friendly': return 0x1a5a2a; // dark green tint
+      default:         return 0x2a2a2a;
     }
   }
 }
